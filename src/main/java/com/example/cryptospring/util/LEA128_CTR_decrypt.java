@@ -1,17 +1,15 @@
 package com.example.cryptospring.util;
 
 
+import com.example.cryptospring.util.crc.CRC;
 import com.example.cryptospring.util.crypto.BlockCipher;
 import com.example.cryptospring.util.crypto.BlockCipherMode;
 import com.example.cryptospring.util.crypto.padding.PKCS5Padding;
 import com.example.cryptospring.util.crypto.symm.LEA;
 import com.example.cryptospring.util.crypto.util.DataTypeTranslation;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
-import java.util.Optional;
-import java.util.function.Predicate;
 
 @Component
 public class LEA128_CTR_decrypt {
@@ -27,10 +25,13 @@ public class LEA128_CTR_decrypt {
 
     private Byte type;
 
+    private CRC crc;
+
     public LEA128_CTR_decrypt(){
         cipher = new LEA.CTR();
         byteIV = new byte[] { (byte) 0x26, (byte) 0x8D, (byte) 0x66, (byte) 0xA7, (byte) 0x35, (byte) 0xA8, (byte) 0x1A, (byte) 0x81, (byte) 0x6F, (byte) 0xBA, (byte) 0xD9, (byte) 0xFA, (byte) 0x36, (byte) 0x16, (byte) 0x25, (byte) 0x01 };
         dataTypeTranslation = new DataTypeTranslation();
+        crc = new CRC();
     }
 
     private void decryptSetting(byte[] key){
@@ -92,14 +93,15 @@ public class LEA128_CTR_decrypt {
     // 파일 복호화
     // 매개변수 : File, Decrypt 될 파일 경로
     // return : 첫번째 바이트 구분자 바이트
-    public byte file(File file, String decryptionPath, LEA128_key key) throws IOException {
+    public byte file(File file, String decryptionPath, LEA128_key key, int crcValue) throws IOException {
 
         File wFile = new File(decryptionPath);
+        System.out.println("file length : " + file.length());
 
         wFile.createNewFile();
         OutputStream out = new FileOutputStream(wFile);
         decryptSetting(key.getKey());
-
+        crc.detection(file, crcValue);
         int decryptClearLen = 0;
         byte type = -1;
         try {
@@ -107,6 +109,7 @@ public class LEA128_CTR_decrypt {
             int dividByte = byteBlock; // 32Byte (암호화가 진행되면 16byte -> 32byte이기 때문)
             boolean isTheEnd = true;
             type = (byte)bis.read(); // 첫 암호화 타입 바이트 제거
+
             do {
                 ByteArrayOutputStream baos = readFromByte(bis, dividByte);
 

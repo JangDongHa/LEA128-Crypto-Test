@@ -1,11 +1,11 @@
 package com.example.cryptospring.util;
 
+import com.example.cryptospring.util.crc.CRC;
 import com.example.cryptospring.util.crypto.BlockCipher;
 import com.example.cryptospring.util.crypto.BlockCipherMode;
 import com.example.cryptospring.util.crypto.padding.PKCS5Padding;
 import com.example.cryptospring.util.crypto.symm.LEA;
 import com.example.cryptospring.util.crypto.util.DataTypeTranslation;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
@@ -22,11 +22,16 @@ public class LEA128_CTR_encrypt {
     public static int byteBlock = 1024 * 1024 * 512; // 읽어들일 바이트 길이
 
     private static byte[] ct1;
+    private static int crcValue;
+
+
+    private static CRC crc;
 
 
     public LEA128_CTR_encrypt(){
         cipher = new LEA.CTR();
         byteIV = new byte[] { (byte) 0x26, (byte) 0x8D, (byte) 0x66, (byte) 0xA7, (byte) 0x35, (byte) 0xA8, (byte) 0x1A, (byte) 0x81, (byte) 0x6F, (byte) 0xBA, (byte) 0xD9, (byte) 0xFA, (byte) 0x36, (byte) 0x16, (byte) 0x25, (byte) 0x01 };
+        crc = new CRC();
     }
 
     private void validation(final String key) {
@@ -124,7 +129,9 @@ public class LEA128_CTR_encrypt {
                 if (firstRound && (baos.size() < 16)) // 첫번째 라운드에 size 가 16바이트 미만이면 아래 if 문에서 처리
                     break;
                 totalSize += baos.size();
-                out.write(encrypt(baos.toByteArray())); // 16바이트 블록 암호문 블록 삽입
+                byte[] encrypted = encrypt((baos.toByteArray()));
+                crc.update(encrypted, 0, encrypted.length);
+                out.write(encrypted); // 16바이트 블록 암호문 블록 삽입
                 len++;
                 firstRound = false;
             }while (isTheEnd);
@@ -143,11 +150,22 @@ public class LEA128_CTR_encrypt {
                     bytes16[i] = plainBytesUnder16[plainBytesUnder16Index++];
             }
             byte[] encryptBytes16 = encrypt(bytes16);
+
+            crc.update(encryptBytes16, 0, encryptBytes16.length);
+
             out.write(encryptBytes16);
         }
 
+
+        byte[] crcArray = crc.addCRCValue();
+        crcValue = crc.toValue(crcArray);
+        out.write(crcArray);
         out.close();
 
+    }
+
+    public int getCrcValue(){
+        return crcValue;
     }
 
 }

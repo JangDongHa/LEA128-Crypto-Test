@@ -41,11 +41,11 @@ public class CryptoService {
     }
 
     public void decryptFileUsingLEA128(File encryptFile, String decryptPath){
-        try {
-            decrypt.file(encryptFile, decryptPath, key);
-        } catch (IOException e) {
-            throw new RuntimeException("Can not find file path");
-        }
+//        try {
+//            decrypt.file(encryptFile, decryptPath, key);
+//        } catch (IOException e) {
+//            throw new RuntimeException("Can not find file path");
+//        }
     }
 
     public void setKey(String key){
